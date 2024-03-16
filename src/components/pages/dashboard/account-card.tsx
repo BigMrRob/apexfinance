@@ -14,6 +14,7 @@ export interface PlaidAccountWithBalances extends PlaidAccount {
 }
 
 const AccountCard = ({ account }: { account: PlaidAccountWithBalances }) => {
+  console.log(account);
   const { mutate: deleteAccount } = trpc.plaid.plaidAccountDelete.useMutation();
 
   const deleteAccountHandler = async () => {

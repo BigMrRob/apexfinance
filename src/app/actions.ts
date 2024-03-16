@@ -54,7 +54,7 @@ export async function onPlaidLinkSuccess(
         id: account.account_id,
         user,
         userId: session?.user.id!,
-        plaidBalance: {
+        balances: {
           available: account.balances?.available || 0,
           current: account.balances?.current || 0,
           limit: account.balances?.limit || 0,
@@ -64,7 +64,7 @@ export async function onPlaidLinkSuccess(
           id: "",
           isoCurrencyCode: "USD",
         },
-        plaidBalanceId: "",
+        balanceId: "",
       };
       return {
         ...plaidAccount,

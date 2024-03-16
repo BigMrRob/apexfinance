@@ -109,10 +109,10 @@ export const plaidRouter = router({
         const institution = await db.$transaction(async (prisma) => {
           // Upsert institution
           const upsertedInstitution = await prisma.plaidInstitution.upsert({
-            where: { institutionId: input.institutionId },
+            where: { institutionId: input.institutionId! },
             update: { name: input.name },
             create: {
-              institutionId: input.institutionId,
+              institutionId: input.institutionId!,
               name: input.name,
             },
           });
@@ -133,16 +133,13 @@ export const plaidRouter = router({
                 id: account.id,
                 mask: account.mask,
                 name: account.name,
-                officialName: account.officialName,
+                officialName: account.officialName || null,
                 subtype: account.subtype,
                 type: account.type,
-                institution: {
-                  connect: { institutionId: upsertedInstitution.institutionId },
-                },
-                user: { connect: { id: account.userId } },
+                institutionId: upsertedInstitution.institutionId,
+                userId: account.userId,
               },
             });
-
             if (account.balances) {
               await prisma.plaidBalance.upsert({
                 where: { id: account.id },

@@ -66,7 +66,7 @@ model User {
 }
 
 model PlaidAccount {
-  id                  String         @id @default(cuid())
+  id                  String    @unique
   userId              String
   mask                String
   name                String
@@ -76,8 +76,7 @@ model PlaidAccount {
   institutionId       String
   persistentAccountId String?
   user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balances            PlaidBalance?  @relation(fields: [balanceId], references: [id])
-  balanceId           String? @unique
+  balances            PlaidBalance  @relation(fields: [id], references: [accountId])
   institution         PlaidInstitution @relation(fields: [institutionId], references: [institutionId])
 }
 
@@ -88,8 +87,8 @@ model PlaidBalance {
   limit                  Float?
   isoCurrencyCode        String
   unofficialCurrencyCode String?
-  account                PlaidAccount?
-  accountId              String?
+  plaidAccount           PlaidAccount?
+  accountId              String? @unique
 }
 
 model PlaidInstitution {

@@ -29,6 +29,7 @@ export default async function Home() {
       </div>
       <ul className="grid grid-cols-5 gap-5">
         {accounts.map((account: PlaidAccount) => {
+          console.log(account);
           return (
             <AccountCard
               key={account.id}

@@ -11,12 +11,11 @@ export const plaidAccountSchema = z.object({
   type: z.string(),
   institutionId: z.string(),
   persistentAccountId: z.string().nullish(),
-  balanceId: z.string().nullish(),
 })
 
 export interface CompletePlaidAccount extends z.infer<typeof plaidAccountSchema> {
   user: CompleteUser
-  balances?: CompletePlaidBalance | null
+  balances: CompletePlaidBalance
   institution: CompletePlaidInstitution
 }
 
@@ -27,6 +26,6 @@ export interface CompletePlaidAccount extends z.infer<typeof plaidAccountSchema>
  */
 export const relatedPlaidAccountSchema: z.ZodSchema<CompletePlaidAccount> = z.lazy(() => plaidAccountSchema.extend({
   user: relatedUserSchema,
-  balances: relatedPlaidBalanceSchema.nullish(),
+  balances: relatedPlaidBalanceSchema,
   institution: relatedPlaidInstitutionSchema,
 }))
