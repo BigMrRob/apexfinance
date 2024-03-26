@@ -6,14 +6,13 @@ import { PlaidInstitution } from "@prisma/client";
 import { CompletePlaidInstitution } from "prisma/zod/plaidinstitution";
 import { CompletePlaidAccount } from "prisma/zod/plaidaccount";
 import { getUserAuth } from "~/lib/auth/utils";
+import { User } from "@prisma/client";
 import { CompleteUser } from "prisma/zod/user";
 
 export async function onPlaidLinkSuccess(
   public_token: string,
   metadata: PlaidLinkOnSuccessMetadata
 ) {
-  console.log("onSuccess", public_token, metadata);
-
   const exchangePublicTokenResponse = await api.plaid.exchangePublicToken.query(
     {
       publicToken: public_token,
@@ -27,65 +26,68 @@ export async function onPlaidLinkSuccess(
     emailVerified: new Date(),
     image: "",
     accounts: [],
-    sessions: [],
     plaidAccounts: [],
+    sessions: [],
   };
 
-  const accounts = await api.plaid.plaidAccountsGet.query({
+  const accountsResponse = await api.plaid.plaidAccountsGet.query({
     accessToken: exchangePublicTokenResponse.accessToken,
   });
 
-  const institution: CompletePlaidInstitution = {
+  const accounts = accountsResponse.map((account) => {
+    return {
+      ...account,
+      id: account.account_id,
+      accessToken: exchangePublicTokenResponse.accessToken,
+      institutionId: metadata.institution?.institution_id!,
+      userId: user.id,
+      mask: account.mask || "",
+      subtype: account.subtype || "",
+      institution: {
+        institutionId: metadata.institution?.institution_id!,
+        name: metadata.institution?.name!,
+        accounts: [],
+      },
+      balances: {
+        available: account.balances.available || 0,
+        current: account.balances.current || 0,
+        limit: account.balances.limit || 0,
+        isoCurrencyCode: "USD",
+        id: "",
+        plaidAccountId: account.account_id,
+        plaidAccount: {
+          id: account.account_id,
+          institutionId: metadata.institution?.institution_id!,
+          userId: user.id,
+          user,
+          accessToken: exchangePublicTokenResponse.accessToken,
+          type: account.type,
+          name: account.name,
+          officialName: account.official_name || "",
+          mask: account.mask || "",
+          subtype: account.subtype || "",
+          institution: {
+            institutionId: metadata.institution?.institution_id!,
+            name: metadata.institution?.name!,
+            accounts: [],
+          },
+        },
+      },
+      user,
+    };
+  });
+
+  const institution: PlaidInstitution = {
     institutionId: metadata.institution?.institution_id!,
     name: metadata.institution?.name!,
-    accounts: accounts.map((account) => {
-      const plaidAccount = {
-        institution: {
-          institutionId: metadata.institution?.institution_id!,
-          name: metadata.institution?.name!,
-          accounts: [],
-        },
-        type: account.type,
-        name: account.name,
-        accountId: account.account_id,
-        mask: account.mask || "",
-        subtype: account.subtype || "",
-        institutionId: metadata.institution?.institution_id!,
-        id: account.account_id,
-        user,
-        userId: session?.user.id!,
-        balances: {
-          available: account.balances?.available || 0,
-          current: account.balances?.current || 0,
-          limit: account.balances?.limit || 0,
-          unofficialCurrencyCode:
-            account.balances.unofficial_currency_code || "",
-          plaidAccountId: account.account_id,
-          id: "",
-          isoCurrencyCode: "USD",
-        },
-        balanceId: "",
-      };
-      return {
-        ...plaidAccount,
-        plaidBalance: {
-          available: account.balances?.available || 0,
-          current: account.balances?.current || 0,
-          limit: account.balances?.limit || 0,
-          unofficialCurrencyCode:
-            account.balances.unofficial_currency_code || "",
-          plaidAccountId: account.account_id,
-          plaidAccount,
-          id: "",
-          isoCurrencyCode: "USD",
-        },
-        plaidBalanceId: "",
-      };
-    }),
   };
 
   const plaidInstitutionCreateResponse =
-    await api.plaid.plaidInstitutionCreate.mutate(institution);
+    await api.plaid.plaidInstitutionCreate.mutate({
+      user,
+      accounts,
+      institution,
+    });
 
   return plaidInstitutionCreateResponse;
 }

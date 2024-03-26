@@ -3,12 +3,12 @@ import { CompletePlaidAccount, relatedPlaidAccountSchema } from "./index"
 
 export const plaidBalanceSchema = z.object({
   id: z.string(),
+  plaidAccountId: z.string(),
   available: z.number(),
   current: z.number(),
   limit: z.number().nullish(),
   isoCurrencyCode: z.string(),
   unofficialCurrencyCode: z.string().nullish(),
-  accountId: z.string().nullish(),
 })
 
 export interface CompletePlaidBalance extends z.infer<typeof plaidBalanceSchema> {

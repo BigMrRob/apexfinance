@@ -2,39 +2,37 @@
 generator client {
   provider = "prisma-client-js"
 }
-
 generator zod {
   provider              = "zod-prisma"
-  output                = "./zod"
-  relationModel         = true
-  modelCase             = "camelCase"
-  modelSuffix           = "Schema"
-  useDecimalJs          = true
-  prismaJsonNullability = true
+  output                = "./zod" 
+  relationModel         = true 
+  modelCase             = "camelCase" 
+  modelSuffix           = "Schema" 
+  useDecimalJs          = true 
+  prismaJsonNullability = true 
 }
 datasource db {
   provider = "postgresql"
-  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
-  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
-}// NextAuth
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+  url      = env("POSTGRES_URL")
 }
 
+// NextAuth
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -42,7 +40,6 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -53,9 +50,9 @@ model VerificationToken {
 
 // User
 model User {
-  id            String         @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String?
-  email         String?        @unique
+  email         String?   @unique
   emailVerified DateTime?
   image         String?
   accounts      Account[]
@@ -63,34 +60,37 @@ model User {
   sessions      Session[]
 }
 
+
+
 model PlaidAccount {
-  id                  String    @unique
-  userId              String
-  mask                String
-  name                String
-  officialName        String?
-  subtype             String
-  type                String
-  institutionId       String
+  id          String  @unique
+  userId      String
+  mask        String
+  name        String
+  accessToken String
+  officialName String?
+  subtype     String
+  type        String
+  balances    PlaidBalance?
+  institutionId String
   persistentAccountId String?
-  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balances            PlaidBalance  @relation(fields: [id], references: [accountId])
-  institution         PlaidInstitution @relation(fields: [institutionId], references: [institutionId])
+  institution PlaidInstitution @relation(fields: [institutionId], references: [institutionId])
+  user        User @relation(fields: [userId], references: [id])
 }
 
 model PlaidBalance {
-  id                     String        @id @default(cuid())
-  available              Float
-  current                Float
-  limit                  Float?
-  isoCurrencyCode        String
+  id          String  @id @default(cuid())
+  plaidAccountId String @unique
+  available   Float
+  current     Float
+  limit       Float?
+  isoCurrencyCode String
   unofficialCurrencyCode String?
-  plaidAccount           PlaidAccount?
-  accountId              String? @unique
+  plaidAccount PlaidAccount? @relation(fields: [plaidAccountId], references: [id], onDelete: Cascade)
 }
 
 model PlaidInstitution {
-  institutionId String         @unique
-  name          String
-  accounts      PlaidAccount[]
+  institutionId String @unique
+  name        String
+  accounts    PlaidAccount[]
 }

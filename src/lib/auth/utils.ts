@@ -5,7 +5,6 @@ import { Adapter } from "next-auth/adapters";
 import { redirect } from "next/navigation";
 import { env } from "~/lib/env.mjs";
 import GoogleProvider from "next-auth/providers/google";
-import AppleProvider from "next-auth/providers/apple";
 
 declare module "next-auth" {
   interface Session {

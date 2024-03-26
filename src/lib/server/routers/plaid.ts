@@ -1,4 +1,7 @@
-import { CompletePlaidAccount } from "./../../../../prisma/zod/plaidaccount";
+import {
+  CompletePlaidAccount,
+  relatedPlaidAccountSchema,
+} from "./../../../../prisma/zod/plaidaccount";
 import { z } from "zod";
 import { protectedProcedure, router } from "../trpc";
 import { plaidClient } from "~/lib/plaid/plaid-client";
@@ -16,6 +19,11 @@ import {
   userSchema,
 } from "~/zodAutoGenSchemas";
 import { db } from "~/lib/db";
+import { Prisma, PlaidAccount, PlaidBalance } from "@prisma/client";
+
+type PlaidAccountWithBalances = PlaidAccount & {
+  balances: PlaidBalance;
+};
 
 export const plaidRouter = router({
   createLinkToken: protectedProcedure
@@ -93,7 +101,7 @@ export const plaidRouter = router({
       try {
         return await db.plaidAccount.findMany({
           where: { userId: input.userId },
-          include: { balances: true },
+          include: { balances: true, institution: true },
         });
       } catch (err) {
         throw new TRPCError({
@@ -103,46 +111,54 @@ export const plaidRouter = router({
       }
     }),
   plaidInstitutionCreate: protectedProcedure
-    .input(relatedPlaidInstitutionSchema)
+    .input(
+      z.object({
+        user: userSchema,
+        accounts: z.array(relatedPlaidAccountSchema),
+        institution: plaidInstitutionSchema,
+      })
+    )
     .mutation(async ({ input }) => {
       try {
         const institution = await db.$transaction(async (prisma) => {
-          // Upsert institution
           const upsertedInstitution = await prisma.plaidInstitution.upsert({
-            where: { institutionId: input.institutionId! },
-            update: { name: input.name },
+            where: { institutionId: input.institution.institutionId },
+            update: { name: input.institution.name },
             create: {
-              institutionId: input.institutionId!,
-              name: input.name,
+              institutionId: input.institution.institutionId,
+              name: input.institution.name,
             },
           });
 
-          // Iterate over accounts to upsert them including their balances
-          for (const account of input.accounts) {
-            await prisma.plaidAccount.upsert({
+          for (const account of input.accounts as PlaidAccountWithBalances[]) {
+            const upsertedAccount = await prisma.plaidAccount.upsert({
               where: { id: account.id },
               update: {
-                mask: account.mask,
                 name: account.name,
+                mask: account.mask,
+                officialName: account.officialName,
                 subtype: account.subtype,
                 type: account.type,
                 institutionId: upsertedInstitution.institutionId,
-                userId: account.userId,
+                userId: input.user.id,
               },
               create: {
                 id: account.id,
-                mask: account.mask,
+                accessToken: account.accessToken,
                 name: account.name,
-                officialName: account.officialName || null,
+                mask: account.mask,
+                officialName: account.officialName,
                 subtype: account.subtype,
                 type: account.type,
                 institutionId: upsertedInstitution.institutionId,
-                userId: account.userId,
+                userId: input.user.id,
               },
             });
+
             if (account.balances) {
+              console.log("here");
               await prisma.plaidBalance.upsert({
-                where: { id: account.id },
+                where: { plaidAccountId: upsertedAccount.id }, // Use the ID of the upserted account
                 update: {
                   available: account.balances.available,
                   current: account.balances.current,
@@ -152,7 +168,7 @@ export const plaidRouter = router({
                     account.balances.unofficialCurrencyCode || null,
                 },
                 create: {
-                  accountId: account.id,
+                  plaidAccountId: upsertedAccount.id, // Link to the newly created/updated PlaidAccount
                   available: account.balances.available,
                   current: account.balances.current,
                   limit: account.balances.limit || null,
@@ -166,30 +182,21 @@ export const plaidRouter = router({
 
           return upsertedInstitution;
         });
-
         return institution;
       } catch (err) {
+        console.log(err);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message:
-            "Failed to create/upsert institution with related accounts and balances.",
+          message: "Error creating new plaid item",
         });
       }
     }),
+
   plaidAccountDelete: protectedProcedure
     .input(z.string())
     .mutation(async ({ input }) => {
-      console.log(input);
-
-      try {
-        return await db.plaidAccount.delete({
-          where: { id: input },
-        });
-      } catch (err) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to delete plaid account",
-        });
-      }
+      return await db.plaidAccount.delete({
+        where: { id: input },
+      });
     }),
 });

@@ -19,5 +19,6 @@ export const env = createEnv({
     POSTGRES_USER: z.string().min(1),
     POSTGRES_PASSWORD: z.string().min(1),
     POSTGRES_DATABASE: z.string().min(1),
+    PULSE_API_KEY: z.string().min(1),
   },
 });

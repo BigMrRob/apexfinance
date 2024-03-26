@@ -4,6 +4,7 @@ import { Button, Card, Metric, Text } from "@tremor/react";
 import { PlaidAccount, PlaidBalance } from "@prisma/client";
 import { CircleX } from "lucide-react";
 import { trpc } from "~/lib/trpc/client";
+import { useRouter } from "next/navigation";
 
 const formatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -13,16 +14,30 @@ export interface PlaidAccountWithBalances extends PlaidAccount {
   balances: PlaidBalance;
 }
 
-const AccountCard = ({ account }: { account: PlaidAccountWithBalances }) => {
-  console.log(account);
-  const { mutate: deleteAccount } = trpc.plaid.plaidAccountDelete.useMutation();
+const AccountCard = ({
+  account,
+  refetch,
+}: {
+  account: PlaidAccountWithBalances;
+  refetch: () => void;
+}) => {
+  const { mutate: deleteAccount } = trpc.plaid.plaidAccountDelete.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
 
   const deleteAccountHandler = async () => {
     await deleteAccount(account.id);
   };
 
+  const router = useRouter();
+
   return (
-    <li key={account.id}>
+    <li
+      key={account.id}
+      onClick={() => router.push(`/transactions/${account.id}`)}
+    >
       <Card
         className="mx-auto max-w-xs relative"
         decoration="top"

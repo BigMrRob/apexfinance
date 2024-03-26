@@ -1,11 +1,12 @@
 import * as z from "zod"
-import { CompleteUser, relatedUserSchema, CompletePlaidBalance, relatedPlaidBalanceSchema, CompletePlaidInstitution, relatedPlaidInstitutionSchema } from "./index"
+import { CompletePlaidBalance, relatedPlaidBalanceSchema, CompletePlaidInstitution, relatedPlaidInstitutionSchema, CompleteUser, relatedUserSchema } from "./index"
 
 export const plaidAccountSchema = z.object({
   id: z.string(),
   userId: z.string(),
   mask: z.string(),
   name: z.string(),
+  accessToken: z.string(),
   officialName: z.string().nullish(),
   subtype: z.string(),
   type: z.string(),
@@ -14,9 +15,9 @@ export const plaidAccountSchema = z.object({
 })
 
 export interface CompletePlaidAccount extends z.infer<typeof plaidAccountSchema> {
-  user: CompleteUser
-  balances: CompletePlaidBalance
+  balances?: CompletePlaidBalance | null
   institution: CompletePlaidInstitution
+  user: CompleteUser
 }
 
 /**
@@ -25,7 +26,7 @@ export interface CompletePlaidAccount extends z.infer<typeof plaidAccountSchema>
  * NOTE: Lazy required in case of potential circular dependencies within schema
  */
 export const relatedPlaidAccountSchema: z.ZodSchema<CompletePlaidAccount> = z.lazy(() => plaidAccountSchema.extend({
-  user: relatedUserSchema,
-  balances: relatedPlaidBalanceSchema,
+  balances: relatedPlaidBalanceSchema.nullish(),
   institution: relatedPlaidInstitutionSchema,
+  user: relatedUserSchema,
 }))
